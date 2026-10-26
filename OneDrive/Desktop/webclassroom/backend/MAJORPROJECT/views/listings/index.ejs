@@ -1,0 +1,658 @@
+<% layout("/layouts/boilerplate") %>
+
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+/>
+
+<style>
+   
+
+    .category-filter-wrapper {
+        width: 100%;
+        margin-bottom: 24px;
+        overflow: hidden;
+        border-bottom: 1px solid #e5e5e5;
+    }
+
+    .category-filters {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        overflow-x: auto;
+        padding: 10px 4px 12px;
+        scrollbar-width: none;
+    }
+
+    .category-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .category-filter {
+        position: relative;
+        flex: 0 0 auto;
+        min-width: 75px;
+        padding: 5px 5px 12px;
+        border: none;
+        background: transparent;
+        color: #717171;
+        cursor: pointer;
+        text-align: center;
+        transition:
+            color 0.25s ease,
+            transform 0.25s ease;
+    }
+
+    .category-filter i {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 24px;
+        line-height: 1;
+        transition: transform 0.25s ease;
+    }
+
+    .category-filter span {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .category-filter:hover {
+        color: #222;
+        transform: translateY(-3px);
+    }
+
+    .category-filter:hover i {
+        transform: scale(1.12);
+    }
+
+    .category-filter.active {
+        color: #222;
+    }
+
+    .category-filter.active::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 2px;
+        border-radius: 5px;
+        background: #222;
+        content: "";
+    }
+
+
+
+    .tax-toggle-wrapper {
+        display: flex;
+        justify-content: flex-end;
+        margin: 16px 0 24px;
+    }
+
+    .tax-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border: 1px solid #dddddd;
+        border-radius: 12px;
+        background: #fff;
+        color: #222;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .tax-switch-input {
+        position: relative;
+        flex-shrink: 0;
+        width: 40px;
+        height: 22px;
+        margin: 0;
+        appearance: none;
+        border: 1px solid #bdbdbd;
+        border-radius: 999px;
+        background: #d6d6d6;
+        cursor: pointer;
+        transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease;
+    }
+
+    .tax-switch-input::before {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+        content: "";
+        transition: transform 0.2s ease;
+    }
+
+    .tax-switch-input:checked {
+        border-color: #222;
+        background: #222;
+    }
+
+    .tax-switch-input:checked::before {
+        transform: translateX(18px);
+    }
+
+    .tax-switch-input:focus-visible,
+    .category-filter:focus-visible {
+        outline: 2px solid #222;
+        outline-offset: 4px;
+    }
+
+  
+
+    .listing-card {
+        overflow: hidden;
+        border-radius: 14px;
+        transition:
+            transform 0.25s ease,
+            box-shadow 0.25s ease;
+    }
+
+    .listing-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 28px rgb(0 0 0 / 13%) !important;
+    }
+
+    .listing-card img {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+    }
+
+    .listing-title {
+        font-weight: 600;
+    }
+
+    .listing-description {
+        display: -webkit-box;
+        overflow: hidden;
+        color: #717171;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .listing-location {
+        color: #717171;
+        font-size: 14px;
+    }
+
+    .listing-location i {
+        margin-right: 4px;
+    }
+
+    .listing-price {
+        margin-bottom: 8px;
+        color: #222;
+        font-weight: 600;
+    }
+
+    .price-label {
+        font-size: 14px;
+        font-weight: 400;
+    }
+
+    .price-tax-note {
+        display: block;
+        margin-top: 4px;
+        color: #717171;
+        font-size: 12px;
+        font-weight: 400;
+    }
+
+    .no-results {
+        display: none;
+        padding: 60px 20px;
+        text-align: center;
+    }
+
+       /* Responsive Design */
+   
+
+    @media (max-width: 768px) {
+        .category-filters {
+            gap: 24px;
+        }
+
+        .category-filter i {
+            font-size: 22px;
+        }
+
+        .category-filter span {
+            font-size: 12px;
+        }
+
+        .listing-card img {
+            height: 220px;
+        }
+
+        .tax-toggle-wrapper {
+            justify-content: flex-start;
+            margin-top: 12px;
+        }
+
+        .tax-toggle {
+            width: 100%;
+            justify-content: space-between;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .category-filter,
+        .category-filter i,
+        .listing-card,
+        .tax-switch-input,
+        .tax-switch-input::before {
+            transition: none;
+        }
+    }
+</style>
+
+<div class="container mt-4">
+
+    <!-- Success Message -->
+    <% if (success && success.length) { %>
+        <div
+            class="alert alert-success alert-dismissible fade show"
+            role="alert"
+        >
+            <%= success[0] %>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close"
+            ></button>
+        </div>
+    <% } %>
+
+    <!-- Error Message -->
+    <% if (error && error.length) { %>
+        <div
+            class="alert alert-danger alert-dismissible fade show"
+            role="alert"
+        >
+            <%= error[0] %>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close"
+            ></button>
+        </div>
+    <% } %>
+
+
+   
+
+    <!-- Category Filters -->
+    <nav
+        class="category-filter-wrapper"
+        aria-label="Filter listings by category"
+    >
+        <div class="category-filters" id="categoryFilters">
+
+            <button
+                type="button"
+                class="category-filter active"
+                data-category="Trending"
+                aria-pressed="true"
+            >
+                <i class="bi bi-fire" aria-hidden="true"></i>
+                <span>Trending</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Rooms"
+                aria-pressed="false"
+            >
+                <i class="bi bi-door-open" aria-hidden="true"></i>
+                <span>Rooms</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Iconic Cities"
+                aria-pressed="false"
+            >
+                <i class="bi bi-buildings" aria-hidden="true"></i>
+                <span>Iconic Cities</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Mountains"
+                aria-pressed="false"
+            >
+                <i class="bi bi-triangle" aria-hidden="true"></i>
+                <span>Mountains</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Castles"
+                aria-pressed="false"
+            >
+                <i class="bi bi-bank" aria-hidden="true"></i>
+                <span>Castles</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Amazing Pools"
+                aria-pressed="false"
+            >
+                <i class="bi bi-water" aria-hidden="true"></i>
+                <span>Amazing Pools</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Camping"
+                aria-pressed="false"
+            >
+                <i class="fa-duotone fa-thin fa-campfire"></i>
+                <span>Camping</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Farms"
+                aria-pressed="false"
+            >
+                <i class="bi bi-flower1" aria-hidden="true"></i>
+                <span>Farms</span>
+            </button>
+
+            <button
+                type="button"
+                class="category-filter"
+                data-category="Arctic"
+                aria-pressed="false"
+            >
+                <i class="bi bi-snow2" aria-hidden="true"></i>
+                <span>Arctic</span>
+            </button>
+
+        </div>
+    </nav>
+
+
+     
+
+    <!-- Display Total After Taxes Switch -->
+    <div class="tax-toggle-wrapper">
+        <label
+            class="tax-toggle"
+            for="flexSwitchCheckDefault"
+        >
+            <span>Display total after taxes</span>
+
+            <input
+                class="tax-switch-input"
+                type="checkbox"
+                id="flexSwitchCheckDefault"
+                role="switch"
+                aria-label="Display total after taxes"
+                checked
+            />
+        </label>
+    </div>
+
+    <!-- Listing Grid -->
+    <div
+        id="listingGrid"
+        class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4"
+    >
+
+        <% for (const listing of allListings) { %>
+
+            <div
+                class="col listing-item"
+                data-category="<%= listing.category || 'Trending' %>"
+            >
+                <a
+                    href="/listings/<%= listing._id %>"
+                    class="text-decoration-none text-dark"
+                >
+                    <article
+                        class="card h-100 border-0 shadow-sm listing-card"
+                    >
+
+                        <!-- Listing Image -->
+                        <% if (listing.image && listing.image.url) { %>
+                            <img
+                                src="<%= listing.image.url %>"
+                                class="card-img-top"
+                                alt="<%= listing.title %>"
+                                loading="lazy"
+                            />
+                        <% } %>
+
+                        <div class="card-body">
+
+                            <!-- Listing Title -->
+                            <h5 class="listing-title">
+                                <%= listing.title %>
+                            </h5>
+
+                            <!-- Listing Description -->
+                            <p class="listing-description">
+                                <%= listing.description %>
+                            </p>
+
+                            <!-- Listing Price -->
+                            <p
+                                class="listing-price tax-info"
+                                data-price="<%= Number(listing.price || 0) %>"
+                            >
+                                <span class="price-amount">
+                                    ₹<%= Number(
+                                        listing.price || 0
+                                    ).toLocaleString("en-IN") %>
+                                </span>
+
+                                <span class="price-label">
+                                    / night
+                                </span>
+
+                                <span
+                                    class="price-tax-note"
+                                    hidden
+                                >
+                                    +18% GST
+                                </span>
+                            </p>
+
+                            <!-- Listing Location -->
+                            <p class="listing-location mb-0">
+                                <i
+                                    class="bi bi-geo-alt-fill"
+                                    aria-hidden="true"
+                                ></i>
+
+                                <%= listing.location %>,
+                                <%= listing.country %>
+                            </p>
+
+                        </div>
+                    </article>
+                </a>
+            </div>
+
+        <% } %>
+
+    </div>
+
+    <!-- No Results Message -->
+    <div
+        id="noResults"
+        class="no-results"
+        role="status"
+        aria-live="polite"
+    >
+        <i
+            class="bi bi-search"
+            style="font-size: 40px;"
+            aria-hidden="true"
+        ></i>
+
+        <h4 class="mt-3">
+            No listings found
+        </h4>
+
+        <p class="text-muted">
+            There are no listings in this category.
+        </p>
+    </div>
+
+</div>
+
+<script>
+    (() => {
+        "use strict";
+
+        // DOM Elements
+        const categoryButtons =
+            document.querySelectorAll(".category-filter");
+
+        const listingItems =
+            document.querySelectorAll(".listing-item");
+
+        const noResults =
+            document.getElementById("noResults");
+
+        const taxSwitch =
+            document.getElementById("flexSwitchCheckDefault");
+
+        const taxInfoElements =
+            document.querySelectorAll(".tax-info");
+
+        /*
+         
+         * Replace with the actual applicable tax rules.
+         */
+        const TAX_RATE = 0.18;
+
+        // Format numbers using Indian currency grouping.
+        function formatINR(amount) {
+            return new Intl.NumberFormat("en-IN", {
+                maximumFractionDigits: 0,
+            }).format(amount);
+        }
+
+        // Update listing prices when the switch changes.
+        function updateTaxPrices() {
+            taxInfoElements.forEach((priceElement) => {
+                const basePrice = Number(
+                    priceElement.dataset.price || 0,
+                );
+
+                const priceAmount =
+                    priceElement.querySelector(".price-amount");
+
+                const priceLabel =
+                    priceElement.querySelector(".price-label");
+
+                const taxNote =
+                    priceElement.querySelector(".price-tax-note");
+
+                if (!priceAmount || !priceLabel || !taxNote) {
+                    return;
+                }
+
+                if (taxSwitch.checked) {
+                    const totalPrice = Math.round(
+                        basePrice * (1 + TAX_RATE),
+                    );
+
+                    priceAmount.textContent =
+                        `₹${formatINR(totalPrice)}`;
+
+                    priceLabel.textContent = "/ night";
+                    taxNote.hidden = false;
+                } else {
+                    priceAmount.textContent =
+                        `₹${formatINR(basePrice)}`;
+
+                    priceLabel.textContent = "/ night";
+                    taxNote.hidden = true;
+                }
+            });
+        }
+
+        // Filter listings by selected category.
+        function filterListings(selectedCategory) {
+            let visibleCount = 0;
+
+            listingItems.forEach((listing) => {
+                const listingCategory =
+                    listing.dataset.category;
+
+                // Trending acts as the default all-listings view.
+                const shouldShow =
+                    selectedCategory === "Trending" ||
+                    listingCategory === selectedCategory;
+
+                listing.hidden = !shouldShow;
+
+                if (shouldShow) {
+                    visibleCount += 1;
+                }
+            });
+
+            noResults.style.display =
+                visibleCount === 0 ? "block" : "none";
+        }
+
+        // Register category button events.
+        categoryButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                categoryButtons.forEach((categoryButton) => {
+                    const isActive =
+                        categoryButton === button;
+
+                    categoryButton.classList.toggle(
+                        "active",
+                        isActive,
+                    );
+
+                    categoryButton.setAttribute(
+                        "aria-pressed",
+                        String(isActive),
+                    );
+                });
+
+                filterListings(button.dataset.category);
+            });
+        });
+
+        // Register tax switch event.
+        taxSwitch.addEventListener(
+            "change",
+            updateTaxPrices,
+        );
+
+        // Initialize prices and the default category.
+        updateTaxPrices();
+        filterListings("Trending");
+    })();
+</script>

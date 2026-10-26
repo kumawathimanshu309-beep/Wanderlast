@@ -1,0 +1,409 @@
+
+<% layout("/layouts/boilerplate") %>
+
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+    .listing-show-container {
+        max-width: 1100px;
+        margin: 30px auto;
+    }
+
+    .listing-image {
+        width: 100%;
+        max-height: 550px;
+        object-fit: cover;
+        border-radius: 16px;
+    }
+
+    .listing-info {
+        margin-top: 25px;
+    }
+
+    .listing-price {
+        font-size: 20px;
+        font-weight: 600;
+    }
+
+    .listing-location {
+        color: #666;
+    }
+
+    .listing-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .map-section {
+        margin-top: 50px;
+        margin-bottom: 40px;
+    }
+
+    .map-section h3 {
+        margin-bottom: 15px;
+    }
+
+    #map {
+        width: 100%;
+        height: 450px;
+        border-radius: 16px;
+        overflow: hidden;
+        z-index: 1;
+    }
+
+    .map-error {
+        padding: 25px;
+        background: #f8f8f8;
+        border-radius: 12px;
+        color: #666;
+    }
+
+    .review-section {
+        margin-top: 40px;
+    }
+
+    .review-card {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .listing-show-container .leaflet-popup-content {
+        line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+        .listing-show-container {
+            margin: 20px 15px;
+        }
+
+        #map {
+            height: 350px;
+        }
+    }
+</style>
+
+<div class="container listing-show-container">
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <h2 class="mb-3">
+                <%= listing.title %>
+            </h2>
+
+            <% if (listing.image && listing.image.url) { %>
+                <img
+                    src="<%= listing.image.url %>"
+                    alt="<%= listing.title %>"
+                    class="listing-image"
+                >
+            <% } %>
+
+            <div class="listing-info">
+                <p>
+                    Listed by
+                    <strong>
+                        <%= listing.owner?.username || "Owner" %>
+                    </strong>
+                </p>
+
+                <p class="listing-price">
+                    ₹<%= Number(listing.price || 0).toLocaleString("en-IN") %>
+                    / night
+                </p>
+
+                <p>
+                    <%= listing.description %>
+                </p>
+
+                <p class="listing-location">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <strong>
+                        <%= listing.location %>
+                    </strong>,
+                    <%= listing.country %>
+                </p>
+
+                <% if (listing.category) { %>
+                    <p>
+                        <span class="badge text-bg-light border">
+                            <%= listing.category %>
+                        </span>
+                    </p>
+                <% } %>
+
+                <div class="listing-actions">
+                    <% if (
+                        currUser &&
+                        listing.owner &&
+                        listing.owner._id.equals(currUser._id)
+                    ) { %>
+                        <a
+                            href="/listings/<%= listing._id %>/edit"
+                            class="btn btn-dark"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                            Edit
+                        </a>
+
+                        <form
+                            method="POST"
+                            action="/listings/<%= listing._id %>?_method=DELETE"
+                        >
+                            <button
+                                type="submit"
+                                class="btn btn-danger"
+                            >
+                                <i class="bi bi-trash3"></i>
+                                Delete
+                            </button>
+                        </form>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Listing Map -->
+    <div class="map-section">
+        <h3>
+            <i class="bi bi-geo-alt-fill"></i>
+            Where you'll be
+        </h3>
+
+        <% if (
+            listing.geometry &&
+            listing.geometry.coordinates &&
+            listing.geometry.coordinates.length === 2 &&
+            listing.geometry.coordinates.every(
+                (coordinate) => Number.isFinite(coordinate)
+            )
+        ) { %>
+            <div
+                id="map"
+                data-coordinates='<%= JSON.stringify(listing.geometry.coordinates) %>'
+                data-title="<%= listing.title %>"
+                data-location="<%= listing.location %>, <%= listing.country %>"
+            ></div>
+        <% } else { %>
+            <div class="map-error">
+                <i class="bi bi-geo-alt"></i>
+                Location coordinates are not available for this listing.
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Reviews -->
+    <div class="review-section">
+        <hr>
+
+        <h3>Leave a Review</h3>
+
+        <% if (currUser) { %>
+            <form
+                method="POST"
+                action="/listings/<%= listing._id %>/reviews"
+                class="needs-validation"
+                novalidate
+            >
+                <div class="mb-3">
+                    <label
+                        for="rating"
+                        class="form-label"
+                    >
+                        Rating
+                    </label>
+
+                    <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        value="3"
+                        id="rating"
+                        name="review[rating]"
+                        class="form-range"
+                        required
+                    >
+
+                    <div>
+                        Selected rating:
+                        <span id="rating-value">3</span>/5
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label
+                        for="comment"
+                        class="form-label"
+                    >
+                        Comments
+                    </label>
+
+                    <textarea
+                        name="review[comment]"
+                        id="comment"
+                        class="form-control"
+                        rows="4"
+                        required
+                    ></textarea>
+
+                    <div class="invalid-feedback">
+                        Please enter your review.
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-dark"
+                >
+                    <i class="bi bi-send"></i>
+                    Submit
+                </button>
+            </form>
+        <% } else { %>
+            <p>
+                <a href="/login">Log in</a> to leave a review.
+            </p>
+        <% } %>
+
+        <% if (listing.reviews && listing.reviews.length) { %>
+            <h4 class="mt-5">All Reviews</h4>
+
+            <div class="row">
+                <% for (let review of listing.reviews) { %>
+                    <div class="col-md-6">
+                        <div class="review-card">
+                            <strong>
+                                <%= review.author?.username || "User" %>
+                            </strong>
+
+                            <div class="text-warning mt-2">
+                                <% for (let i = 1; i <= 5; i++) { %>
+                                    <% if (i <= review.rating) { %>
+                                        ★
+                                    <% } else { %>
+                                        ☆
+                                    <% } %>
+                                <% } %>
+                            </div>
+
+                            <p class="mt-2 mb-0">
+                                <%= review.comment %>
+                            </p>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<!-- Leaflet Map Library -->
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const mapElement = document.getElementById("map");
+
+        if (mapElement && typeof L !== "undefined") {
+            try {
+                const coordinates = JSON.parse(
+                    mapElement.dataset.coordinates
+                );
+
+                // GeoJSON coordinates are [longitude, latitude].
+                const longitude = Number(coordinates[0]);
+                const latitude = Number(coordinates[1]);
+
+                if (
+                    !Number.isFinite(longitude) ||
+                    !Number.isFinite(latitude) ||
+                    latitude < -90 ||
+                    latitude > 90 ||
+                    longitude < -180 ||
+                    longitude > 180
+                ) {
+                    throw new Error("Invalid listing coordinates.");
+                }
+
+                const listingTitle = mapElement.dataset.title;
+                const listingLocation = mapElement.dataset.location;
+
+                const map = L.map("map").setView(
+                    [latitude, longitude],
+                    12
+                );
+
+                L.tileLayer(
+                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {
+                        maxZoom: 19,
+                        attribution:
+                            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }
+                ).addTo(map);
+
+                const marker = L.marker([
+                    latitude,
+                    longitude
+                ]).addTo(map);
+
+                // Build popup with textContent to avoid HTML injection.
+                const popupContent = document.createElement("div");
+
+                const titleElement = document.createElement("strong");
+                titleElement.textContent = listingTitle;
+
+                const locationElement = document.createElement("div");
+                locationElement.textContent = listingLocation;
+
+                popupContent.appendChild(titleElement);
+                popupContent.appendChild(locationElement);
+
+                marker
+                    .bindPopup(popupContent)
+                    .openPopup();
+
+                // Correct map rendering after the container is displayed.
+                setTimeout(function () {
+                    map.invalidateSize();
+                }, 100);
+            } catch (error) {
+                console.error("Map initialization failed:", error);
+                mapElement.innerHTML =
+                    '<div class="map-error">Unable to display the map. Please check the listing coordinates and try again.</div>';
+            }
+        }
+
+        // Update the review rating label.
+        const ratingInput = document.getElementById("rating");
+        const ratingValue = document.getElementById("rating-value");
+
+        if (ratingInput && ratingValue) {
+            ratingInput.addEventListener("input", function () {
+                ratingValue.textContent = ratingInput.value;
+            });
+        }
+
+        // Bootstrap form validation.
+        const forms = document.querySelectorAll(".needs-validation");
+
+        forms.forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+
+                form.classList.add("was-validated");
+            });
+        });
+    });
+</script>
+
