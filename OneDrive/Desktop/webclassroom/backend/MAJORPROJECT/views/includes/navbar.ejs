@@ -201,7 +201,7 @@
                     <a class="nav-link" href="/listings">Explore</a>
                 </li>
 
-                <% if (currUser) { %>
+               <% if (typeof currUser !== "undefined" && currUser) { %>
                     <li class="nav-item">
                         <a class="nav-link" href="/listings/new">
                             Add New Listing
