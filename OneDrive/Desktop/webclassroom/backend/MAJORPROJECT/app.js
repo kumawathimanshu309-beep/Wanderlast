@@ -112,33 +112,56 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Start server after connecting to MongoDB
-async function startServer() {
+// MongoDB connection
+let isConnected = false;
+
+async function connectDB() {
+    if (isConnected) {
+        return;
+    }
+
     if (!dbUrl || !/^mongodb(\+srv)?:\/\//.test(dbUrl)) {
-        throw new Error(
-            "Invalid ATLASDB_URL. Check your MongoDB connection string in .env."
-        );
+        throw new Error("Invalid ATLASDB_URL environment variable.");
     }
 
     if (!process.env.SECRET) {
         throw new Error("SECRET is missing from environment variables.");
     }
 
-    if (!process.env.MAP_TOKEN) {
-        console.warn("Warning: MAP_TOKEN is missing from .env.");
-    }
-
     await mongoose.connect(dbUrl);
 
+    isConnected = true;
     console.log("MongoDB Atlas connected successfully.");
-
-    app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
-    });
 }
 
-startServer().catch((error) => {
-    console.error("Application startup failed:", error.message);
-    process.exit(1);
+// Export Express app for Vercel
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error("Database connection failed:", error.message);
+        next(error);
+    }
 });
 
+module.exports = app;
+
+// Start local server only outside Vercel
+if (!process.env.VERCEL) {
+    connectDB()
+        .then(() => {
+            app.listen(PORT, () => {
+                console.log(
+                    `Server is running on http://localhost:${PORT}`
+                );
+            });
+        })
+        .catch((error) => {
+            console.error(
+                "Application startup failed:",
+                error.message
+            );
+            process.exit(1);
+        });
+}
