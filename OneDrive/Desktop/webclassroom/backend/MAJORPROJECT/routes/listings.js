@@ -5,7 +5,7 @@ const { listingSchema } = require("../schema.js");
 const ExpressError = require("../utils/ExpressError1.js");
 const { isLoggedIn, isOwner } = require("../middilware.js");
 const ListingController = require("../controllers/listings.js");
-const { storage } = require("../cloudconfig.js");
+const { storage } = require("../cloudConfig.js");
 
 const router = express.Router();
 
