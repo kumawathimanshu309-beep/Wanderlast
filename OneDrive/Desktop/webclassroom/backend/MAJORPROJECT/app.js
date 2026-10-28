@@ -4,6 +4,7 @@ if (process.env.NODE_ENV !== "production") {
     require("dotenv").config();
 }
 
+// Import dependencies
 const express = require("express");
 const mongoose = require("mongoose");
 const path = require("path");
@@ -21,43 +22,68 @@ const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 const User = require("./models/user.js");
 
+// Initialize Express application
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 const dbUrl = process.env.ATLASDB_URL;
+const sessionSecret = process.env.SECRET;
 
-// View engine configuration
+// Configure EJS
+app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.engine("ejs", ejsMate);
 
-// Middleware
+// Configure middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(methodOverride("_method"));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Shared template variables
-app.use((req, res, next) => {
-    res.locals.MAP_TOKEN = process.env.MAP_TOKEN;
-    next();
-});
+// Connect to MongoDB
+let dbConnectionPromise = null;
 
-// Session configuration
+async function connectDB() {
+    if (mongoose.connection.readyState === 1) {
+        return;
+    }
+
+    if (!dbUrl || !/^mongodb(\+srv)?:\/\//.test(dbUrl)) {
+        throw new Error("Invalid ATLASDB_URL environment variable.");
+    }
+
+    if (!dbConnectionPromise) {
+        dbConnectionPromise = mongoose
+            .connect(dbUrl)
+            .then(() => {
+                console.log("MongoDB Atlas connected successfully.");
+            })
+            .catch((error) => {
+                dbConnectionPromise = null;
+                throw error;
+            });
+    }
+
+    await dbConnectionPromise;
+}
+
+// Configure session
 if (!MongoStore || typeof MongoStore.create !== "function") {
-    throw new Error(
-        "Invalid connect-mongo import. Check your installed connect-mongo version."
-    );
+    throw new Error("Invalid connect-mongo import.");
+}
+
+if (!sessionSecret) {
+    throw new Error("SECRET is missing from environment variables.");
 }
 
 app.use(
     session({
+        name: "wanderlust.sid",
+        secret: sessionSecret,
         store: MongoStore.create({
             mongoUrl: dbUrl,
             collectionName: "sessions",
             ttl: 7 * 24 * 60 * 60,
         }),
-        secret: process.env.SECRET,
         resave: false,
         saveUninitialized: false,
         cookie: {
@@ -69,99 +95,73 @@ app.use(
     })
 );
 
-// Flash messages
+// Configure flash messages
 app.use(flash());
 
-// Passport authentication
+// Configure Passport authentication
 app.use(passport.initialize());
 app.use(passport.session());
-
 passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-// Shared authentication and flash variables
+// Set shared EJS variables
 app.use((req, res, next) => {
-    res.locals.currUser = req.user;
+    res.locals.currUser = req.user || null;
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
+    res.locals.MAP_TOKEN = process.env.MAP_TOKEN;
     next();
 });
 
-// Application routes
+// Connect to database before handling requests
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Register application routes
 app.use("/listings", listingsRouter);
 app.use("/listings/:id/reviews", reviewRouter);
 app.use("/", userRouter);
 
-// 404 handler
+// Handle 404 errors
 app.use((req, res, next) => {
     next(new ExpressError(404, "Page not found"));
 });
 
-// Central error handler
+// Handle application errors
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
-
     const message =
         statusCode === 500
             ? "Something went wrong"
             : err.message || "Something went wrong";
+
+    console.error("Application error:", err.message);
 
     res.status(statusCode).render("listings/error.ejs", {
         message,
     });
 });
 
-// MongoDB connection
-let isConnected = false;
-
-async function connectDB() {
-    if (isConnected) {
-        return;
-    }
-
-    if (!dbUrl || !/^mongodb(\+srv)?:\/\//.test(dbUrl)) {
-        throw new Error("Invalid ATLASDB_URL environment variable.");
-    }
-
-    if (!process.env.SECRET) {
-        throw new Error("SECRET is missing from environment variables.");
-    }
-
-    await mongoose.connect(dbUrl);
-
-    isConnected = true;
-    console.log("MongoDB Atlas connected successfully.");
-}
-
-// Export Express app for Vercel
-app.use(async (req, res, next) => {
-    try {
-        await connectDB();
-        next();
-    } catch (error) {
-        console.error("Database connection failed:", error.message);
-        next(error);
-    }
-});
-
+// Export Express application for Vercel
 module.exports = app;
 
-// Start local server only outside Vercel
+// Start local development server
 if (!process.env.VERCEL) {
     connectDB()
         .then(() => {
             app.listen(PORT, () => {
-                console.log(
-                    `Server is running on http://localhost:${PORT}`
-                );
+                console.log(`Server running at http://localhost:${PORT}`);
             });
         })
         .catch((error) => {
-            console.error(
-                "Application startup failed:",
-                error.message
-            );
+            console.error("Application startup failed:", error.message);
             process.exit(1);
         });
 }
