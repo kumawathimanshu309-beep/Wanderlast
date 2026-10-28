@@ -237,7 +237,7 @@
             </div>
 
             <ul class="navbar-nav navbar-right ms-auto">
-                <% if (!currUser) { %>
+               <% if (typeof currUser === "undefined" || !currUser) { %>
                     <li class="nav-item">
                         <a class="nav-link" href="/signup">
                             <b>Signup</b>
